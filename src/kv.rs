@@ -5,6 +5,7 @@ use std::fs::{DirEntry, File};
 use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use anyhow::Result;
+use serde_json::{Deserializer, Serializer};
 
 fn main() {
     println!("Hello, world!");
@@ -20,9 +21,10 @@ pub struct KvStore {
     index: BTreeMap<String, CommandPos>,
     // the number of bytes representing "stale" commands that could be
     // deleted during a compaction.
-    uncompacted: u64,
+    uncompleted: u64,
 }
 
+#[derive(Deserializer, Serializer)]
 struct CommandPos {
     gen: u64,
     pos: u64,
@@ -72,7 +74,7 @@ impl KvStore {
         let mut index = BTreeMap::<String, CommandPos>::new();
         let gen_list = read_file_gen_list(&path)?;
         // 导入文件
-        let mut uncompacted = 0;
+        let mut uncompleted = 0;
 
         for &item in &gen_list {
             let reader = BufReaderWithPos::new(File::open(log_file_path_gen(&path,item))?)?;
@@ -120,7 +122,11 @@ fn load ( gen: u64,
           reader: &mut BufReaderWithPos<File>,
           index: &mut BTreeMap<String, CommandPos>,) {
     let pos = reader.seek(SeekFrom::Start(0));
-
+    let mut command_iter = serde_json::Deserializer::from_reader(reader).into_iter::<CommandPos>();
+    let uncompleted: u64 = 0;
+    while let Some(Ok(_item)) = command_iter.next() {
+        let new_pos = command_iter
+    }
 
 }
 #[test]
